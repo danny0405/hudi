@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -61,6 +62,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import scala.Tuple2;
@@ -70,12 +74,14 @@ public abstract class BaseFlinkCommitActionExecutor<T extends HoodieRecordPayloa
 
   private static final Logger LOG = LogManager.getLogger(BaseFlinkCommitActionExecutor.class);
 
+  private final ExecutorService writeExecutor;
+
   public BaseFlinkCommitActionExecutor(HoodieEngineContext context,
                                        HoodieWriteConfig config,
                                        HoodieTable table,
                                        String instantTime,
                                        WriteOperationType operationType) {
-    super(context, config, table, instantTime, operationType, Option.empty());
+    this(context, config, table, instantTime, operationType, Option.empty());
   }
 
   public BaseFlinkCommitActionExecutor(HoodieEngineContext context,
@@ -85,6 +91,8 @@ public abstract class BaseFlinkCommitActionExecutor<T extends HoodieRecordPayloa
                                        WriteOperationType operationType,
                                        Option extraMetadata) {
     super(context, config, table, instantTime, operationType, extraMetadata);
+    // TODO(danny): make it configurable
+    this.writeExecutor = Executors.newFixedThreadPool(4);
   }
 
   @Override
@@ -115,13 +123,19 @@ public abstract class BaseFlinkCommitActionExecutor<T extends HoodieRecordPayloa
     Map<Integer, List<HoodieRecord<T>>> partitionedRecords = partition(inputRecords, partitioner);
 
     List<WriteStatus> writeStatuses = new LinkedList<>();
+    List<Runnable> tasks = new ArrayList<>();
     partitionedRecords.forEach((partition, records) -> {
+      final Runnable runnable;
       if (WriteOperationType.isChangingRecords(operationType)) {
-        handleUpsertPartition(instantTime, partition, records.iterator(), partitioner).forEachRemaining(writeStatuses::addAll);
+        runnable = () ->
+            handleUpsertPartition(instantTime, partition, records.iterator(), partitioner).forEachRemaining(writeStatuses::addAll);
       } else {
-        handleInsertPartition(instantTime, partition, records.iterator(), partitioner).forEachRemaining(writeStatuses::addAll);
+        runnable = () ->
+            handleInsertPartition(instantTime, partition, records.iterator(), partitioner).forEachRemaining(writeStatuses::addAll);
       }
+      tasks.add(runnable);
     });
+    runAsyncAndAwaitTermination(tasks);
     updateIndex(writeStatuses, result);
     return result;
   }
@@ -328,4 +342,15 @@ public abstract class BaseFlinkCommitActionExecutor<T extends HoodieRecordPayloa
     return getUpsertPartitioner(profile);
   }
 
+  // -------------------------------------------------------------------------
+  //  Utilities
+  // -------------------------------------------------------------------------
+
+  /** Run the given tasks asynchronously and wait all the tasks to finish. */
+  private void runAsyncAndAwaitTermination(List<Runnable> tasks) {
+    CompletableFuture<?>[] futures = tasks.stream()
+        .map(task -> CompletableFuture.runAsync(task, writeExecutor))
+        .toArray(CompletableFuture[]::new);
+    CompletableFuture.allOf(futures).join();
+  }
 }

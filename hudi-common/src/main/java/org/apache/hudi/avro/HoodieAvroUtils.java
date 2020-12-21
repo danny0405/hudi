@@ -217,7 +217,7 @@ public class HoodieAvroUtils {
 
   private static Schema initRecordKeySchema() {
     Schema.Field recordKeyField =
-        new Schema.Field(HoodieRecord.RECORD_KEY_METADATA_FIELD, METADATA_FIELD_SCHEMA, "", NullNode.getInstance());
+        new Schema.Field(HoodieRecord.RECORD_KEY_METADATA_FIELD, METADATA_FIELD_SCHEMA, "", (Object) null);
     Schema recordKeySchema = Schema.createRecord("HoodieRecordKey", "", "", false);
     recordKeySchema.setFields(Collections.singletonList(recordKeyField));
     return recordKeySchema;

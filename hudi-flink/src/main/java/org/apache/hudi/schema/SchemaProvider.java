@@ -18,9 +18,8 @@
 
 package org.apache.hudi.schema;
 
-import org.apache.hudi.common.config.TypedProperties;
-
 import org.apache.avro.Schema;
+import org.apache.flink.configuration.Configuration;
 
 import java.io.Serializable;
 
@@ -29,10 +28,10 @@ import java.io.Serializable;
  */
 public abstract class SchemaProvider implements Serializable {
 
-  protected TypedProperties config;
+  protected Configuration config;
 
-  protected SchemaProvider(TypedProperties props) {
-    this.config = props;
+  protected SchemaProvider(Configuration configuration) {
+    this.config = configuration;
   }
 
   public abstract Schema getSourceSchema();

@@ -18,34 +18,32 @@
 
 package org.apache.hudi;
 
-import org.apache.hudi.client.WriteStatus;
-import org.apache.hudi.common.model.HoodieRecord;
 import org.apache.hudi.common.model.OverwriteWithLatestAvroPayload;
 import org.apache.hudi.common.model.WriteOperationType;
-import org.apache.hudi.operator.InstantGenerateOperator;
-import org.apache.hudi.operator.KeyedWriteProcessFunction;
-import org.apache.hudi.operator.KeyedWriteProcessOperator;
-import org.apache.hudi.sink.CommitSink;
-import org.apache.hudi.source.JsonStringToHoodieRecordMapFunction;
+import org.apache.hudi.keygen.SimpleAvroKeyGenerator;
+import org.apache.hudi.operator.HoodieOptions;
+import org.apache.hudi.operator.StreamWriteOperatorFactory;
 import org.apache.hudi.util.StreamerUtil;
 
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
-import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.api.common.typeinfo.TypeHint;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.formats.avro.typeutils.AvroSchemaConverter;
+import org.apache.flink.formats.json.JsonRowDataDeserializationSchema;
+import org.apache.flink.formats.json.TimestampFormat;
 import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
+import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
+import org.apache.flink.table.types.logical.LogicalType;
+import org.apache.flink.table.types.logical.RowType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -76,34 +74,36 @@ public class HoodieFlinkStreamer {
     Properties kafkaProps = StreamerUtil.getKafkaProps(cfg);
 
     // Read from kafka source
-    DataStream<HoodieRecord> inputRecords =
-        env.addSource(new FlinkKafkaConsumer<>(cfg.kafkaTopic, new SimpleStringSchema(), kafkaProps))
-            .filter(Objects::nonNull)
-            .map(new JsonStringToHoodieRecordMapFunction(cfg))
-            .name("kafka_to_hudi_record")
-            .uid("kafka_to_hudi_record_uid");
+    RowType rowType =
+        (RowType) AvroSchemaConverter.convertToDataType(StreamerUtil.getSourceSchema(cfg).toString())
+            .getLogicalType();
+    Configuration conf = HoodieOptions.fromStreamerConfig(cfg);
+    StreamWriteOperatorFactory<RowData> operatorFactory =
+        new StreamWriteOperatorFactory<>(rowType, conf, 10);
 
-    // InstantGenerateOperator helps to emit globally unique instantTime, it must be executed in one parallelism
-    inputRecords.transform(InstantGenerateOperator.NAME, TypeInformation.of(HoodieRecord.class), new InstantGenerateOperator())
-        .name("instant_generator")
-        .uid("instant_generator_id")
-        .setParallelism(1)
+    int partitionFieldIndex = rowType.getFieldIndex(conf.getString(HoodieOptions.PARTITION_PATH_FIELD));
+    LogicalType partitionFieldType = rowType.getTypeAt(partitionFieldIndex);
+    final RowData.FieldGetter partitionFieldGetter =
+        RowData.createFieldGetter(partitionFieldType, partitionFieldIndex);
 
-        // Keyby partition path, to avoid multiple subtasks writing to a partition at the same time
-        .keyBy(HoodieRecord::getPartitionPath)
+    DataStream<Object> dataStream = env.addSource(new FlinkKafkaConsumer<>(
+        cfg.kafkaTopic,
+        new JsonRowDataDeserializationSchema(
+            rowType,
+            InternalTypeInfo.of(rowType),
+            false,
+            true,
+            TimestampFormat.ISO_8601
+        ), kafkaProps))
+        .name("kafka_source")
+        .uid("uid_kafka_source")
+        // Key-by partition path, to avoid multiple subtasks write to a partition at the same time
+        .keyBy(partitionFieldGetter::getFieldOrNull)
+        .transform("hoodie_stream_write", null, operatorFactory)
+        .uid("uid_hoodie_stream_write")
+        .setParallelism(10); // should make it configurable
 
-        // write operator, where the write operation really happens
-        .transform(KeyedWriteProcessOperator.NAME, TypeInformation.of(new TypeHint<Tuple3<String, List<WriteStatus>, Integer>>() {
-        }), new KeyedWriteProcessOperator(new KeyedWriteProcessFunction()))
-        .name("write_process")
-        .uid("write_process_uid")
-        .setParallelism(env.getParallelism())
-
-        // Commit can only be executed once, so make it one parallelism
-        .addSink(new CommitSink())
-        .name("commit_sink")
-        .uid("commit_sink_uid")
-        .setParallelism(1);
+    env.addOperator(dataStream.getTransformation());
 
     env.execute(cfg.targetTableName);
   }
@@ -133,6 +133,11 @@ public class HoodieFlinkStreamer {
         required = true)
     public String targetBasePath;
 
+    @Parameter(names = {"--read-schema-path"},
+        description = "Avro schema file path, the parsed schema is used for deserializing",
+        required = true)
+    public String readSchemaFilePath;
+
     @Parameter(names = {"--target-table"}, description = "name of the target table in Hive", required = true)
     public String targetTableName;
 
@@ -149,6 +154,19 @@ public class HoodieFlinkStreamer {
     @Parameter(names = {"--hoodie-conf"}, description = "Any configuration that can be set in the properties file "
         + "(using the CLI parameter \"--props\") can also be passed command line using this parameter.")
     public List<String> configs = new ArrayList<>();
+
+    @Parameter(names = {"--record-key-field"}, description = "Record key field. Value to be used as the `recordKey` component of `HoodieKey`.\n"
+        + "Actual value will be obtained by invoking .toString() on the field value. Nested fields can be specified using "
+        + "the dot notation eg: `a.b.c`. By default `uuid`.")
+    public String recordKeyField = "uuid";
+
+    @Parameter(names = {"--partition-path-field"}, description = "Partition path field. Value to be used at \n"
+        + "the `partitionPath` component of `HoodieKey`. Actual value obtained by invoking .toString(). By default `partitionpath`.")
+    public String partitionPathField = "partitionpath";
+
+    @Parameter(names = {"--partition-path-field"}, description = "Key generator class, that implements will extract the key out of incoming record.\n"
+        + "By default `SimpleAvroKeyGenerator`.")
+    public String keygenClass = SimpleAvroKeyGenerator.class.getName();
 
     @Parameter(names = {"--source-ordering-field"}, description = "Field within source record to decide how"
         + " to break ties between records with same key in input data. Default: 'ts' holding unix timestamp of record")
