@@ -143,6 +143,13 @@
 
                   <include>org.apache.hbase:hbase-common</include>
                   <include>commons-codec:commons-codec</include>
+                  <include>org.apache.spark:spark-sql_${scala.binary.version}</include>
+                  <include>org.apache.spark:spark-catalyst_${scala.binary.version}</include>
+                  <include>org.apache.spark:spark-core_${scala.binary.version}</include>
+                  <include>org.json4s:json4s-jackson_${scala.binary.version}</include>
+                  <include>org.json4s:json4s-ast_${scala.binary.version}</include>
+                  <include>org.json4s:json4s-scalap_${scala.binary.version}</include>
+                  <include>org.json4s:json4s-core_${scala.binary.version}</include>
                 </includes>
               </artifactSet>
               <relocations>
@@ -592,7 +599,51 @@
         </exclusion>
       </exclusions>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${scala.binary.version}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_${scala.binary.version}</artifactId>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.json4s</groupId>
+      <artifactId>json4s-jackson_${scala.binary.version}</artifactId>
+      <version>3.5.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.json4s</groupId>
+      <artifactId>json4s-ast_${scala.binary.version}</artifactId>
+      <version>3.5.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.json4s</groupId>
+      <artifactId>json4s-scalap_${scala.binary.version}</artifactId>
+      <version>3.5.3</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.json4s</groupId>
+      <artifactId>json4s-core_${scala.binary.version}</artifactId>
+      <version>3.5.3</version>
+    </dependency>
   </dependencies>
+
 
   <profiles>
     <profile>
