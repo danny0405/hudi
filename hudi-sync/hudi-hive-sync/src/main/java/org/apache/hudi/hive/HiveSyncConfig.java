@@ -110,6 +110,12 @@ public class HiveSyncConfig implements Serializable {
   @Parameter(names = {"--batch-sync-num"}, description = "The number of partitions one batch when synchronous partitions to hive")
   public Integer batchSyncNum = 1000;
 
+  @Parameter(names = {"--sparkDataSource"}, description = "Whether save this table as spark data source table.")
+  public Boolean saveAsSparkDataSourceTable = true;
+
+  @Parameter(names = {"--spark-schemaLengthThreshold"}, description = "The maximum length allowed in a single cell when storing additional schema information in Hive's metastore.")
+  public int sparkSchemaLengthThreshold = 4000;
+
   // enhance the similar function in child class
   public static HiveSyncConfig copy(HiveSyncConfig cfg) {
     HiveSyncConfig newConfig = new HiveSyncConfig();
@@ -131,6 +137,8 @@ public class HiveSyncConfig implements Serializable {
     newConfig.serdeProperties = cfg.serdeProperties;
     newConfig.createManagedTable = cfg.createManagedTable;
     newConfig.batchSyncNum = cfg.batchSyncNum;
+    newConfig.saveAsSparkDataSourceTable = cfg.saveAsSparkDataSourceTable;
+    newConfig.sparkSchemaLengthThreshold = cfg.sparkSchemaLengthThreshold;
     return newConfig;
   }
 
@@ -160,6 +168,8 @@ public class HiveSyncConfig implements Serializable {
       + ", supportTimestamp=" + supportTimestamp
       + ", decodePartition=" + decodePartition
       + ", createManagedTable=" + createManagedTable
+      + ", saveAsSparkDataSourceTable=" + saveAsSparkDataSourceTable
+      + ", sparkSchemaLengthThreshold=" + sparkSchemaLengthThreshold
       + '}';
   }
 }
