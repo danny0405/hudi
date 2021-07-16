@@ -102,7 +102,7 @@ public class ValidateDatasetNode extends DagNode<Boolean> {
     // read from hudi and remove meta columns.
     Dataset<Row> hudiDf = session.read().format("hudi").load(hudiPath);
     Dataset<Row> trimmedDf = hudiDf.drop(HoodieRecord.COMMIT_TIME_METADATA_FIELD).drop(HoodieRecord.COMMIT_SEQNO_METADATA_FIELD).drop(HoodieRecord.RECORD_KEY_METADATA_FIELD)
-        .drop(HoodieRecord.PARTITION_PATH_METADATA_FIELD).drop(HoodieRecord.FILENAME_METADATA_FIELD);
+        .drop(HoodieRecord.PARTITION_PATH_METADATA_FIELD).drop(HoodieRecord.FILENAME_METADATA_FIELD).drop(HoodieRecord.OPERATION_METADATA_FIELD);
 
     Dataset<Row> intersectionDf = inputSnapshotDf.intersect(trimmedDf);
     // the intersected df should be same as inputDf. if not, there is some mismatch.
@@ -117,7 +117,7 @@ public class ValidateDatasetNode extends DagNode<Boolean> {
       log.warn("Validating hive table with db : " + database + " and table : " + tableName);
       Dataset<Row> cowDf = session.sql("SELECT * FROM " + database + "." + tableName);
       Dataset<Row> trimmedCowDf = cowDf.drop(HoodieRecord.COMMIT_TIME_METADATA_FIELD).drop(HoodieRecord.COMMIT_SEQNO_METADATA_FIELD).drop(HoodieRecord.RECORD_KEY_METADATA_FIELD)
-          .drop(HoodieRecord.PARTITION_PATH_METADATA_FIELD).drop(HoodieRecord.FILENAME_METADATA_FIELD);
+          .drop(HoodieRecord.PARTITION_PATH_METADATA_FIELD).drop(HoodieRecord.FILENAME_METADATA_FIELD).drop(HoodieRecord.OPERATION_METADATA_FIELD);
       intersectionDf = inputSnapshotDf.intersect(trimmedDf);
       // the intersected df should be same as inputDf. if not, there is some mismatch.
       if (inputSnapshotDf.except(intersectionDf).count() != 0) {
