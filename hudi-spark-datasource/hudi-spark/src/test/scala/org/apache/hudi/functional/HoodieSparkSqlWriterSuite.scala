@@ -171,7 +171,7 @@ class HoodieSparkSqlWriterSuite extends FunSuite with Matchers {
           // remove metadata columns so that expected and actual DFs can be compared as is
           val trimmedDf = actualDf.drop(HoodieRecord.HOODIE_META_COLUMNS.get(0)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(1))
             .drop(HoodieRecord.HOODIE_META_COLUMNS.get(2)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(3))
-            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4))
+            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(5))
 
           assert(df.except(trimmedDf).count() == 0)
         } finally {
@@ -262,7 +262,7 @@ class HoodieSparkSqlWriterSuite extends FunSuite with Matchers {
       // remove metadata columns so that expected and actual DFs can be compared as is
       val trimmedDf = actualDf.drop(HoodieRecord.HOODIE_META_COLUMNS.get(0)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(1))
         .drop(HoodieRecord.HOODIE_META_COLUMNS.get(2)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(3))
-        .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4))
+        .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(5))
 
       assert(df.except(trimmedDf).count() == 0)
     } finally {
@@ -314,7 +314,7 @@ class HoodieSparkSqlWriterSuite extends FunSuite with Matchers {
         // remove metadata columns so that expected and actual DFs can be compared as is
         val trimmedDf = actualDf.drop(HoodieRecord.HOODIE_META_COLUMNS.get(0)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(1))
           .drop(HoodieRecord.HOODIE_META_COLUMNS.get(2)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(3))
-          .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4))
+          .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(5))
 
         // find total df (union from multiple rounds)
         totalExpectedDf = totalExpectedDf.union(df)
@@ -394,7 +394,7 @@ class HoodieSparkSqlWriterSuite extends FunSuite with Matchers {
           // remove metadata columns so that expected and actual DFs can be compared as is
           val trimmedDf = actualDf.drop(HoodieRecord.HOODIE_META_COLUMNS.get(0)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(1))
             .drop(HoodieRecord.HOODIE_META_COLUMNS.get(2)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(3))
-            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4))
+            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(5))
 
           assert(df.except(trimmedDf).count() == 0)
         } finally {
@@ -493,7 +493,7 @@ class HoodieSparkSqlWriterSuite extends FunSuite with Matchers {
           // remove metadata columns so that expected and actual DFs can be compared as is
           val trimmedDf1 = snapshotDF1.drop(HoodieRecord.HOODIE_META_COLUMNS.get(0)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(1))
             .drop(HoodieRecord.HOODIE_META_COLUMNS.get(2)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(3))
-            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4))
+            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(5))
 
           assert(df1.except(trimmedDf1).count() == 0)
 
@@ -511,7 +511,7 @@ class HoodieSparkSqlWriterSuite extends FunSuite with Matchers {
           // remove metadata columns so that expected and actual DFs can be compared as is
           val trimmedDf2 = snapshotDF1.drop(HoodieRecord.HOODIE_META_COLUMNS.get(0)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(1))
             .drop(HoodieRecord.HOODIE_META_COLUMNS.get(2)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(3))
-            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4))
+            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(5))
 
           // ensure 2nd batch of updates matches.
           assert(updatesDf.intersect(trimmedDf2).except(updatesDf).count() == 0)
@@ -532,7 +532,7 @@ class HoodieSparkSqlWriterSuite extends FunSuite with Matchers {
           // remove metadata columns so that expected and actual DFs can be compared as is
           val trimmedDf3 = snapshotDF3.drop(HoodieRecord.HOODIE_META_COLUMNS.get(0)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(1))
             .drop(HoodieRecord.HOODIE_META_COLUMNS.get(2)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(3))
-            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4))
+            .drop(HoodieRecord.HOODIE_META_COLUMNS.get(4)).drop(HoodieRecord.HOODIE_META_COLUMNS.get(5))
 
           // ensure 2nd batch of updates matches.
           assert(df3.intersect(trimmedDf3).except(df3).count() == 0)
