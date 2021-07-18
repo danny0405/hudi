@@ -39,7 +39,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.operators.ProcessOperator;
-import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.sink.DataStreamSinkProvider;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
@@ -56,10 +56,10 @@ import java.util.Map;
 public class HoodieTableSink implements DynamicTableSink, SupportsPartitioning, SupportsOverwrite {
 
   private final Configuration conf;
-  private final TableSchema schema;
+  private final ResolvedSchema schema;
   private boolean overwrite = false;
 
-  public HoodieTableSink(Configuration conf, TableSchema schema) {
+  public HoodieTableSink(Configuration conf, ResolvedSchema schema) {
     this.conf = conf;
     this.schema = schema;
   }
@@ -67,8 +67,7 @@ public class HoodieTableSink implements DynamicTableSink, SupportsPartitioning, 
   @Override
   public SinkRuntimeProvider getSinkRuntimeProvider(Context context) {
     return (DataStreamSinkProvider) dataStream -> {
-      // Read from kafka source
-      RowType rowType = (RowType) schema.toRowDataType().notNull().getLogicalType();
+      RowType rowType = (RowType) schema.toSourceRowDataType().notNull().getLogicalType();
       long ckpTimeout = dataStream.getExecutionEnvironment()
           .getCheckpointConfig().getCheckpointTimeout();
       int parallelism = dataStream.getExecutionConfig().getParallelism();
@@ -150,21 +149,18 @@ public class HoodieTableSink implements DynamicTableSink, SupportsPartitioning, 
   }
 
   @Override
-  public void applyStaticPartition(Map<String, String> partition) {
+  public void applyStaticPartition(Map<String, String> partitions) {
     // #applyOverwrite should have been invoked.
-    if (this.overwrite) {
-      final String operationType;
-      if (partition.size() > 0) {
-        operationType = WriteOperationType.INSERT_OVERWRITE.value();
-      } else {
-        operationType = WriteOperationType.INSERT_OVERWRITE_TABLE.value();
-      }
-      this.conf.setString(FlinkOptions.OPERATION, operationType);
+    if (this.overwrite && partitions.size() > 0) {
+      this.conf.setString(FlinkOptions.OPERATION, WriteOperationType.INSERT_OVERWRITE.value());
     }
   }
 
   @Override
-  public void applyOverwrite(boolean b) {
-    this.overwrite = b;
+  public void applyOverwrite(boolean overwrite) {
+    this.overwrite = overwrite;
+    // set up the operation as INSERT_OVERWRITE_TABLE first,
+    // if there are explicit partitions, #applyStaticPartition would overwrite the option.
+    this.conf.setString(FlinkOptions.OPERATION, WriteOperationType.INSERT_OVERWRITE_TABLE.value());
   }
 }

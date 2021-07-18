@@ -22,16 +22,18 @@ import org.apache.hudi.configuration.FlinkOptions;
 import org.apache.hudi.keygen.ComplexAvroKeyGenerator;
 import org.apache.hudi.keygen.NonpartitionedAvroKeyGenerator;
 import org.apache.hudi.util.StreamerUtil;
+import org.apache.hudi.utils.SchemaBuilder;
 import org.apache.hudi.utils.TestConfigurations;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.table.api.DataTypes;
-import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.catalog.CatalogTable;
-import org.apache.flink.table.catalog.CatalogTableImpl;
 import org.apache.flink.table.catalog.ObjectIdentifier;
+import org.apache.flink.table.catalog.ResolvedCatalogTable;
+import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.factories.DynamicTableFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,7 +82,7 @@ public class TestHoodieTableFactory {
   @Test
   void testRequiredOptionsForSource() {
     // miss pk and pre combine key will throw exception
-    TableSchema schema1 = TableSchema.builder()
+    ResolvedSchema schema1 = SchemaBuilder.instance()
         .field("f0", DataTypes.INT().notNull())
         .field("f1", DataTypes.VARCHAR(20))
         .field("f2", DataTypes.TIMESTAMP(3))
@@ -90,7 +92,7 @@ public class TestHoodieTableFactory {
     assertThrows(ValidationException.class, () -> new HoodieTableFactory().createDynamicTableSink(sourceContext1));
 
     // given the pk and miss the pre combine key will throw exception
-    TableSchema schema2 = TableSchema.builder()
+    ResolvedSchema schema2 = SchemaBuilder.instance()
         .field("f0", DataTypes.INT().notNull())
         .field("f1", DataTypes.VARCHAR(20))
         .field("f2", DataTypes.TIMESTAMP(3))
@@ -101,7 +103,7 @@ public class TestHoodieTableFactory {
     assertThrows(ValidationException.class, () -> new HoodieTableFactory().createDynamicTableSink(sourceContext2));
 
     // given pk and pre combine key will be ok
-    TableSchema schema3 = TableSchema.builder()
+    ResolvedSchema schema3 = SchemaBuilder.instance()
         .field("f0", DataTypes.INT().notNull())
         .field("f1", DataTypes.VARCHAR(20))
         .field("f2", DataTypes.TIMESTAMP(3))
@@ -135,7 +137,7 @@ public class TestHoodieTableFactory {
     this.conf.setString(FlinkOptions.RECORD_KEY_FIELD, "dummyField");
     this.conf.setString(FlinkOptions.KEYGEN_CLASS, "dummyKeyGenClass");
     // definition with simple primary key and partition path
-    TableSchema schema1 = TableSchema.builder()
+    ResolvedSchema schema1 = SchemaBuilder.instance()
         .field("f0", DataTypes.INT().notNull())
         .field("f1", DataTypes.VARCHAR(20))
         .field("f2", DataTypes.TIMESTAMP(3))
@@ -150,7 +152,7 @@ public class TestHoodieTableFactory {
 
     // definition with complex primary keys and partition paths
     this.conf.setString(FlinkOptions.KEYGEN_CLASS, FlinkOptions.KEYGEN_CLASS.defaultValue());
-    TableSchema schema2 = TableSchema.builder()
+    ResolvedSchema schema2 = SchemaBuilder.instance()
         .field("f0", DataTypes.INT().notNull())
         .field("f1", DataTypes.VARCHAR(20).notNull())
         .field("f2", DataTypes.TIMESTAMP(3))
@@ -175,7 +177,7 @@ public class TestHoodieTableFactory {
   @Test
   void testSetupCleaningOptionsForSource() {
     // definition with simple primary key and partition path
-    TableSchema schema1 = TableSchema.builder()
+    ResolvedSchema schema1 = SchemaBuilder.instance()
         .field("f0", DataTypes.INT().notNull())
         .field("f1", DataTypes.VARCHAR(20))
         .field("f2", DataTypes.TIMESTAMP(3))
@@ -222,7 +224,7 @@ public class TestHoodieTableFactory {
     this.conf.setString(FlinkOptions.RECORD_KEY_FIELD, "dummyField");
     this.conf.setString(FlinkOptions.KEYGEN_CLASS, "dummyKeyGenClass");
     // definition with simple primary key and partition path
-    TableSchema schema1 = TableSchema.builder()
+    ResolvedSchema schema1 = SchemaBuilder.instance()
         .field("f0", DataTypes.INT().notNull())
         .field("f1", DataTypes.VARCHAR(20))
         .field("f2", DataTypes.TIMESTAMP(3))
@@ -237,7 +239,7 @@ public class TestHoodieTableFactory {
 
     // definition with complex primary keys and partition paths
     this.conf.setString(FlinkOptions.KEYGEN_CLASS, FlinkOptions.KEYGEN_CLASS.defaultValue());
-    TableSchema schema2 = TableSchema.builder()
+    ResolvedSchema schema2 = SchemaBuilder.instance()
         .field("f0", DataTypes.INT().notNull())
         .field("f1", DataTypes.VARCHAR(20).notNull())
         .field("f2", DataTypes.TIMESTAMP(3))
@@ -262,7 +264,7 @@ public class TestHoodieTableFactory {
   @Test
   void testSetupCleaningOptionsForSink() {
     // definition with simple primary key and partition path
-    TableSchema schema1 = TableSchema.builder()
+    ResolvedSchema schema1 = SchemaBuilder.instance()
         .field("f0", DataTypes.INT().notNull())
         .field("f1", DataTypes.VARCHAR(20))
         .field("f2", DataTypes.TIMESTAMP(3))
@@ -297,10 +299,10 @@ public class TestHoodieTableFactory {
    */
   private static class MockContext implements DynamicTableFactory.Context {
     private final Configuration conf;
-    private final TableSchema schema;
+    private final ResolvedSchema schema;
     private final List<String> partitions;
 
-    private MockContext(Configuration conf, TableSchema schema, List<String> partitions) {
+    private MockContext(Configuration conf, ResolvedSchema schema, List<String> partitions) {
       this.conf = conf;
       this.schema = schema;
       this.partitions = partitions;
@@ -310,11 +312,11 @@ public class TestHoodieTableFactory {
       return getInstance(conf, TestConfigurations.TABLE_SCHEMA, Collections.singletonList("partition"));
     }
 
-    static MockContext getInstance(Configuration conf, TableSchema schema, String partition) {
+    static MockContext getInstance(Configuration conf, ResolvedSchema schema, String partition) {
       return getInstance(conf, schema, Collections.singletonList(partition));
     }
 
-    static MockContext getInstance(Configuration conf, TableSchema schema, List<String> partitions) {
+    static MockContext getInstance(Configuration conf, ResolvedSchema schema, List<String> partitions) {
       return new MockContext(conf, schema, partitions);
     }
 
@@ -324,8 +326,10 @@ public class TestHoodieTableFactory {
     }
 
     @Override
-    public CatalogTable getCatalogTable() {
-      return new CatalogTableImpl(schema, partitions, conf.toMap(), "mock source table");
+    public ResolvedCatalogTable getCatalogTable() {
+      CatalogTable catalogTable = CatalogTable.of(Schema.newBuilder().fromResolvedSchema(schema).build(),
+          "mock source table", partitions, conf.toMap());
+      return new ResolvedCatalogTable(catalogTable, schema);
     }
 
     @Override

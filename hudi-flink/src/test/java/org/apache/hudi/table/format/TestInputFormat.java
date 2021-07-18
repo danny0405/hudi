@@ -98,17 +98,18 @@ public class TestInputFormat {
     result = readData(inputFormat);
 
     actual = TestData.rowDataToString(result);
-    expected = "[id1,Danny,24,1970-01-01T00:00:00.001,par1, "
-        + "id10,Ella,38,1970-01-01T00:00:00.007,par4, "
-        + "id11,Phoebe,52,1970-01-01T00:00:00.008,par4, "
-        + "id2,Stephen,34,1970-01-01T00:00:00.002,par1, "
-        + "id3,Julian,54,1970-01-01T00:00:00.003,par2, "
-        + "id4,Fabian,32,1970-01-01T00:00:00.004,par2, "
-        + "id5,Sophia,18,1970-01-01T00:00:00.005,par3, "
-        + "id6,Emma,20,1970-01-01T00:00:00.006,par3, "
-        + "id7,Bob,44,1970-01-01T00:00:00.007,par4, "
-        + "id8,Han,56,1970-01-01T00:00:00.008,par4, "
-        + "id9,Jane,19,1970-01-01T00:00:00.006,par3]";
+    expected = "["
+        + "+I[id1, Danny, 24, 1970-01-01T00:00:00.001, par1], "
+        + "+I[id10, Ella, 38, 1970-01-01T00:00:00.007, par4], "
+        + "+I[id11, Phoebe, 52, 1970-01-01T00:00:00.008, par4], "
+        + "+I[id2, Stephen, 34, 1970-01-01T00:00:00.002, par1], "
+        + "+I[id3, Julian, 54, 1970-01-01T00:00:00.003, par2], "
+        + "+I[id4, Fabian, 32, 1970-01-01T00:00:00.004, par2], "
+        + "+I[id5, Sophia, 18, 1970-01-01T00:00:00.005, par3], "
+        + "+I[id6, Emma, 20, 1970-01-01T00:00:00.006, par3], "
+        + "+I[id7, Bob, 44, 1970-01-01T00:00:00.007, par4], "
+        + "+I[id8, Han, 56, 1970-01-01T00:00:00.008, par4], "
+        + "+I[id9, Jane, 19, 1970-01-01T00:00:00.006, par3]]";
     assertThat(actual, is(expected));
   }
 
@@ -144,21 +145,22 @@ public class TestInputFormat {
     result = readData(inputFormat);
 
     actual = TestData.rowDataToString(result);
-    expected = "[id1,Danny,24,1970-01-01T00:00:00.001,par1, "
-        + "id10,Ella,38,1970-01-01T00:00:00.007,par4, "
-        + "id11,Phoebe,52,1970-01-01T00:00:00.008,par4, "
-        + "id12,Monica,27,1970-01-01T00:00:00.009,par5, "
-        + "id13,Phoebe,31,1970-01-01T00:00:00.010,par5, "
-        + "id14,Rachel,52,1970-01-01T00:00:00.011,par6, "
-        + "id15,Ross,29,1970-01-01T00:00:00.012,par6, "
-        + "id2,Stephen,34,1970-01-01T00:00:00.002,par1, "
-        + "id3,Julian,54,1970-01-01T00:00:00.003,par2, "
-        + "id4,Fabian,32,1970-01-01T00:00:00.004,par2, "
-        + "id5,Sophia,18,1970-01-01T00:00:00.005,par3, "
-        + "id6,Emma,20,1970-01-01T00:00:00.006,par3, "
-        + "id7,Bob,44,1970-01-01T00:00:00.007,par4, "
-        + "id8,Han,56,1970-01-01T00:00:00.008,par4, "
-        + "id9,Jane,19,1970-01-01T00:00:00.006,par3]";
+    expected = "["
+        + "+I[id1, Danny, 24, 1970-01-01T00:00:00.001, par1], "
+        + "+I[id10, Ella, 38, 1970-01-01T00:00:00.007, par4], "
+        + "+I[id11, Phoebe, 52, 1970-01-01T00:00:00.008, par4], "
+        + "+I[id12, Monica, 27, 1970-01-01T00:00:00.009, par5], "
+        + "+I[id13, Phoebe, 31, 1970-01-01T00:00:00.010, par5], "
+        + "+I[id14, Rachel, 52, 1970-01-01T00:00:00.011, par6], "
+        + "+I[id15, Ross, 29, 1970-01-01T00:00:00.012, par6], "
+        + "+I[id2, Stephen, 34, 1970-01-01T00:00:00.002, par1], "
+        + "+I[id3, Julian, 54, 1970-01-01T00:00:00.003, par2], "
+        + "+I[id4, Fabian, 32, 1970-01-01T00:00:00.004, par2], "
+        + "+I[id5, Sophia, 18, 1970-01-01T00:00:00.005, par3], "
+        + "+I[id6, Emma, 20, 1970-01-01T00:00:00.006, par3], "
+        + "+I[id7, Bob, 44, 1970-01-01T00:00:00.007, par4], "
+        + "+I[id8, Han, 56, 1970-01-01T00:00:00.008, par4], "
+        + "+I[id9, Jane, 19, 1970-01-01T00:00:00.006, par3]]";
     assertThat(actual, is(expected));
   }
 
@@ -177,11 +179,11 @@ public class TestInputFormat {
 
     final String actual = TestData.rowDataToString(result);
     final String expected = "["
-        + "id1,Danny,24,1970-01-01T00:00:00.001,par1, "
-        + "id2,Stephen,34,1970-01-01T00:00:00.002,par1, "
-        + "id3,null,null,null,null, "
-        + "id5,null,null,null,null, "
-        + "id9,null,null,null,null]";
+        + "+I[id1, Danny, 24, 1970-01-01T00:00:00.001, par1], "
+        + "+I[id2, Stephen, 34, 1970-01-01T00:00:00.002, par1], "
+        + "-D[id3, null, null, null, null], "
+        + "-D[id5, null, null, null, null], "
+        + "-D[id9, null, null, null, null]]";
     assertThat(actual, is(expected));
   }
 
@@ -201,7 +203,7 @@ public class TestInputFormat {
     List<RowData> result = readData(inputFormat);
 
     String actual = TestData.rowDataToString(result);
-    String expected = "[id1,Danny,23,1970-01-01T00:00:00.001,par1, id2,Stephen,33,1970-01-01T00:00:00.002,par1]";
+    String expected = "[+I[id1, Danny, 23, 1970-01-01T00:00:00.001, par1], +I[id2, Stephen, 33, 1970-01-01T00:00:00.002, par1]]";
     assertThat(actual, is(expected));
   }
 

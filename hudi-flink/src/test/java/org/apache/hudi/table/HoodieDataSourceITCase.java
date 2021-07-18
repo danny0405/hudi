@@ -66,7 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * IT cases for Hoodie table source and sink.
- *
+ * <p>
  * Note: should add more SQL cases when batch write is supported.
  */
 public class HoodieDataSourceITCase extends AbstractTestBase {
@@ -248,11 +248,11 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
 
     List<Row> result = execSelectSql(streamTableEnv, "select * from t1", 10);
     final String expected = "["
-        + "id1,Danny,24,1970-01-01T00:00:00.001,par1, "
-        + "id2,Stephen,34,1970-01-01T00:00:00.002,par1, "
-        + "id3,null,null,null,null, "
-        + "id5,null,null,null,null, "
-        + "id9,null,null,null,null]";
+        + "+I[id1, Danny, 24, 1970-01-01T00:00:00.001, par1], "
+        + "+I[id2, Stephen, 34, 1970-01-01T00:00:00.002, par1], "
+        + "-D[id3, null, null, null, null], "
+        + "-D[id5, null, null, null, null], "
+        + "-D[id9, null, null, null, null]]";
     assertRowsEquals(result, expected);
   }
 
@@ -286,9 +286,9 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
     List<Row> result2 = CollectionUtil.iterableToList(
         () -> tableEnv.sqlQuery("select * from t1 where uuid > 'id5'").execute().collect());
     assertRowsEquals(result2, "["
-        + "id6,Emma,20,1970-01-01T00:00:06,par3, "
-        + "id7,Bob,44,1970-01-01T00:00:07,par4, "
-        + "id8,Han,56,1970-01-01T00:00:08,par4]");
+        + "+I[id6, Emma, 20, 1970-01-01T00:00:06, par3], "
+        + "+I[id7, Bob, 44, 1970-01-01T00:00:07, par4], "
+        + "+I[id8, Han, 56, 1970-01-01T00:00:08, par4]]");
   }
 
   @ParameterizedTest
@@ -296,40 +296,40 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
   void testWriteAndReadParMiddle(ExecMode execMode) throws Exception {
     boolean streaming = execMode == ExecMode.STREAM;
     String hoodieTableDDL = "create table t1(\n"
-            + "  uuid varchar(20),\n"
-            + "  name varchar(10),\n"
-            + "  age int,\n"
-            + "  `partition` varchar(20),\n" // test streaming read with partition field in the middle
-            + "  ts timestamp(3),\n"
-            + "  PRIMARY KEY(uuid) NOT ENFORCED\n"
-            + ")\n"
-            + "PARTITIONED BY (`partition`)\n"
-            + "with (\n"
-            + "  'connector' = 'hudi',\n"
-            + "  'path' = '" + tempFile.getAbsolutePath() + "',\n"
-            + "  'read.streaming.enabled' = '" + streaming + "'\n"
-            + ")";
+        + "  uuid varchar(20),\n"
+        + "  name varchar(10),\n"
+        + "  age int,\n"
+        + "  `partition` varchar(20),\n" // test streaming read with partition field in the middle
+        + "  ts timestamp(3),\n"
+        + "  PRIMARY KEY(uuid) NOT ENFORCED\n"
+        + ")\n"
+        + "PARTITIONED BY (`partition`)\n"
+        + "with (\n"
+        + "  'connector' = 'hudi',\n"
+        + "  'path' = '" + tempFile.getAbsolutePath() + "',\n"
+        + "  'read.streaming.enabled' = '" + streaming + "'\n"
+        + ")";
     streamTableEnv.executeSql(hoodieTableDDL);
     String insertInto = "insert into t1 values\n"
-            + "('id1','Danny',23,'par1',TIMESTAMP '1970-01-01 00:00:01'),\n"
-            + "('id2','Stephen',33,'par1',TIMESTAMP '1970-01-01 00:00:02'),\n"
-            + "('id3','Julian',53,'par2',TIMESTAMP '1970-01-01 00:00:03'),\n"
-            + "('id4','Fabian',31,'par2',TIMESTAMP '1970-01-01 00:00:04'),\n"
-            + "('id5','Sophia',18,'par3',TIMESTAMP '1970-01-01 00:00:05'),\n"
-            + "('id6','Emma',20,'par3',TIMESTAMP '1970-01-01 00:00:06'),\n"
-            + "('id7','Bob',44,'par4',TIMESTAMP '1970-01-01 00:00:07'),\n"
-            + "('id8','Han',56,'par4',TIMESTAMP '1970-01-01 00:00:08')";
+        + "('id1','Danny',23,'par1',TIMESTAMP '1970-01-01 00:00:01'),\n"
+        + "('id2','Stephen',33,'par1',TIMESTAMP '1970-01-01 00:00:02'),\n"
+        + "('id3','Julian',53,'par2',TIMESTAMP '1970-01-01 00:00:03'),\n"
+        + "('id4','Fabian',31,'par2',TIMESTAMP '1970-01-01 00:00:04'),\n"
+        + "('id5','Sophia',18,'par3',TIMESTAMP '1970-01-01 00:00:05'),\n"
+        + "('id6','Emma',20,'par3',TIMESTAMP '1970-01-01 00:00:06'),\n"
+        + "('id7','Bob',44,'par4',TIMESTAMP '1970-01-01 00:00:07'),\n"
+        + "('id8','Han',56,'par4',TIMESTAMP '1970-01-01 00:00:08')";
     execInsertSql(streamTableEnv, insertInto);
 
     final String expected = "["
-            + "id1,Danny,23,par1,1970-01-01T00:00:01, "
-            + "id2,Stephen,33,par1,1970-01-01T00:00:02, "
-            + "id3,Julian,53,par2,1970-01-01T00:00:03, "
-            + "id4,Fabian,31,par2,1970-01-01T00:00:04, "
-            + "id5,Sophia,18,par3,1970-01-01T00:00:05, "
-            + "id6,Emma,20,par3,1970-01-01T00:00:06, "
-            + "id7,Bob,44,par4,1970-01-01T00:00:07, "
-            + "id8,Han,56,par4,1970-01-01T00:00:08]";
+        + "+I[id1, Danny, 23, par1, 1970-01-01T00:00:01], "
+        + "+I[id2, Stephen, 33, par1, 1970-01-01T00:00:02], "
+        + "+I[id3, Julian, 53, par2, 1970-01-01T00:00:03], "
+        + "+I[id4, Fabian, 31, par2, 1970-01-01T00:00:04], "
+        + "+I[id5, Sophia, 18, par3, 1970-01-01T00:00:05], "
+        + "+I[id6, Emma, 20, par3, 1970-01-01T00:00:06], "
+        + "+I[id7, Bob, 44, par4, 1970-01-01T00:00:07], "
+        + "+I[id8, Han, 56, par4, 1970-01-01T00:00:08]]";
 
     List<Row> result = execSelectSql(streamTableEnv, "select * from t1", execMode);
 
@@ -383,8 +383,8 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
     List<Row> result2 = CollectionUtil.iterableToList(
         () -> tableEnv.sqlQuery("select * from t1").execute().collect());
     final String expected = "["
-        + "id1,Danny,24,1970-01-01T00:00:01,par1, "
-        + "id2,Stephen,34,1970-01-01T00:00:02,par2]";
+        + "+I[id1, Danny, 24, 1970-01-01T00:00:01, par1], "
+        + "+I[id2, Stephen, 34, 1970-01-01T00:00:02, par2]]";
     assertRowsEquals(result2, expected);
   }
 
@@ -413,7 +413,7 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
 
     List<Row> result = CollectionUtil.iterableToList(
         () -> tableEnv.sqlQuery("select * from t1").execute().collect());
-    assertRowsEquals(result, "[id1,Sophia,18,1970-01-01T00:00:05,par1]");
+    assertRowsEquals(result, "[+I[id1, Sophia, 18, 1970-01-01T00:00:05, par1]]");
   }
 
   @ParameterizedTest
@@ -449,7 +449,7 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
 
     List<Row> result = CollectionUtil.iterableToList(
         () -> tableEnv.sqlQuery("select * from t1").execute().collect());
-    assertRowsEquals(result, "[id1,Sophia,18,1970-01-01T00:00:05,par5]");
+    assertRowsEquals(result, "[+I[id1, Sophia, 18, 1970-01-01T00:00:05, par5]]");
   }
 
   @Test
@@ -472,7 +472,7 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
 
     List<Row> result = CollectionUtil.iterableToList(
         () -> streamTableEnv.sqlQuery("select * from t1").execute().collect());
-    assertRowsEquals(result, "[id1,Phoebe,52,1970-01-01T00:00:08,par4]");
+    assertRowsEquals(result, "[+I[id1, Phoebe, 52, 1970-01-01T00:00:08, par4]]");
   }
 
   @Test
@@ -496,10 +496,10 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
     List<Row> result = CollectionUtil.iterableToList(
         () -> streamTableEnv.sqlQuery("select * from t1").execute().collect());
     final String expected = "["
-        + "id1,Stephen,34,1970-01-01T00:00:02,par1, "
-        + "id1,Fabian,32,1970-01-01T00:00:04,par2, "
-        + "id1,Jane,19,1970-01-01T00:00:06,par3, "
-        + "id1,Phoebe,52,1970-01-01T00:00:08,par4]";
+        + "+I[id1, Stephen, 34, 1970-01-01T00:00:02, par1], "
+        + "+I[id1, Fabian, 32, 1970-01-01T00:00:04, par2], "
+        + "+I[id1, Jane, 19, 1970-01-01T00:00:06, par3], "
+        + "+I[id1, Phoebe, 52, 1970-01-01T00:00:08, par4]]";
     assertRowsEquals(result, expected, 3);
   }
 
@@ -519,7 +519,7 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
 
     // execute query and assert throws exception
     assertThrows(HoodieException.class, () -> execSelectSql(streamTableEnv, "select * from t1", 10),
-            "No successful commits under path " + tempFile.getAbsolutePath());
+        "No successful commits under path " + tempFile.getAbsolutePath());
 
   }
 
@@ -559,16 +559,16 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
     execInsertSql(streamTableEnv, insertInto);
 
     final String expected = "["
-        + "101,1000,scooter,3.140000104904175, "
-        + "102,2000,car battery,8.100000381469727, "
-        + "103,3000,12-pack drill bits,0.800000011920929, "
-        + "104,4000,hammer,0.75, "
-        + "105,5000,hammer,0.875, "
-        + "106,10000,hammer,1.0, "
-        + "107,11000,rocks,5.099999904632568, "
-        + "108,8000,jacket,0.10000000149011612, "
-        + "109,9000,spare tire,22.200000762939453, "
-        + "110,14000,jacket,0.5]";
+        + "+I[101, 1000, scooter, 3.140000104904175], "
+        + "+I[102, 2000, car battery, 8.100000381469727], "
+        + "+I[103, 3000, 12-pack drill bits, 0.800000011920929], "
+        + "+I[104, 4000, hammer, 0.75], "
+        + "+I[105, 5000, hammer, 0.875], "
+        + "+I[106, 10000, hammer, 1.0], "
+        + "+I[107, 11000, rocks, 5.099999904632568], "
+        + "+I[108, 8000, jacket, 0.10000000149011612], "
+        + "+I[109, 9000, spare tire, 22.200000762939453], "
+        + "+I[110, 14000, jacket, 0.5]]";
 
     List<Row> result = execSelectSql(streamTableEnv, "select * from hoodie_sink", execMode);
 
@@ -606,7 +606,7 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
   }
 
   private List<Row> execSelectSql(TableEnvironment tEnv, String select, ExecMode execMode)
-          throws TableNotExistException, InterruptedException {
+      throws TableNotExistException, InterruptedException {
     final String[] splits = select.split(" ");
     final String tableName = splits[splits.length - 1];
     switch (execMode) {
@@ -621,12 +621,12 @@ public class HoodieDataSourceITCase extends AbstractTestBase {
   }
 
   private List<Row> execSelectSql(TableEnvironment tEnv, String select, long timeout)
-          throws InterruptedException, TableNotExistException {
+      throws InterruptedException, TableNotExistException {
     return execSelectSql(tEnv, select, timeout, null);
   }
 
   private List<Row> execSelectSql(TableEnvironment tEnv, String select, long timeout, String sourceTable)
-          throws InterruptedException, TableNotExistException {
+      throws InterruptedException, TableNotExistException {
     final String sinkDDL;
     if (sourceTable != null) {
       // use the source table schema as the sink schema if the source table was specified, .

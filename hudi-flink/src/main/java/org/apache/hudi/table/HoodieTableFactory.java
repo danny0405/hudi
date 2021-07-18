@@ -25,17 +25,16 @@ import org.apache.hudi.util.AvroSchemaConverter;
 
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.api.constraints.UniqueConstraint;
 import org.apache.flink.table.catalog.CatalogTable;
+import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.logical.LogicalType;
-import org.apache.flink.table.utils.TableSchemaUtils;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Hoodie data source/sink factory.
@@ -60,7 +58,7 @@ public class HoodieTableFactory implements DynamicTableSourceFactory, DynamicTab
     helper.validate();
 
     Configuration conf = (Configuration) helper.getOptions();
-    TableSchema schema = TableSchemaUtils.getPhysicalSchema(context.getCatalogTable().getSchema());
+    ResolvedSchema schema = context.getCatalogTable().getResolvedSchema();
     validateRequiredFields(conf, schema);
     setupConfOptions(conf, context.getObjectIdentifier().getObjectName(), context.getCatalogTable(), schema);
 
@@ -77,7 +75,7 @@ public class HoodieTableFactory implements DynamicTableSourceFactory, DynamicTab
   @Override
   public DynamicTableSink createDynamicTableSink(Context context) {
     Configuration conf = FlinkOptions.fromMap(context.getCatalogTable().getOptions());
-    TableSchema schema = TableSchemaUtils.getPhysicalSchema(context.getCatalogTable().getSchema());
+    ResolvedSchema schema = context.getCatalogTable().getResolvedSchema();
     validateRequiredFields(conf, schema);
     setupConfOptions(conf, context.getObjectIdentifier().getObjectName(), context.getCatalogTable(), schema);
     return new HoodieTableSink(conf, schema);
@@ -107,8 +105,8 @@ public class HoodieTableFactory implements DynamicTableSourceFactory, DynamicTab
    * @param conf The table options
    * @param schema The table schema
    */
-  private void validateRequiredFields(Configuration conf, TableSchema schema) {
-    List<String> fields = Arrays.stream(schema.getFieldNames()).collect(Collectors.toList());
+  private void validateRequiredFields(Configuration conf, ResolvedSchema schema) {
+    final List<String> fields = schema.getColumnNames();
 
     // validate record key in pk absence.
     if (!schema.getPrimaryKey().isPresent()) {
@@ -141,7 +139,7 @@ public class HoodieTableFactory implements DynamicTableSourceFactory, DynamicTab
       Configuration conf,
       String tableName,
       CatalogTable table,
-      TableSchema schema) {
+      ResolvedSchema schema) {
     // table name
     conf.setString(FlinkOptions.TABLE_NAME.key(), tableName);
     // hoodie key about options
@@ -149,7 +147,7 @@ public class HoodieTableFactory implements DynamicTableSourceFactory, DynamicTab
     // compaction options
     setupCompactionOptions(conf);
     // infer avro schema from physical DDL schema
-    inferAvroSchema(conf, schema.toRowDataType().notNull().getLogicalType());
+    inferAvroSchema(conf, schema.toPhysicalRowDataType().notNull().getLogicalType());
   }
 
   /**

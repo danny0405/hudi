@@ -54,7 +54,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.InputFormatSourceFunction;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperatorFactory;
 import org.apache.flink.table.api.DataTypes;
-import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.source.DataStreamScanProvider;
 import org.apache.flink.table.connector.source.DynamicTableSource;
@@ -108,7 +108,7 @@ public class HoodieTableSource implements
   private final transient HoodieTableMetaClient metaClient;
   private final long maxCompactionMemoryInBytes;
 
-  private final TableSchema schema;
+  private final ResolvedSchema schema;
   private final Path path;
   private final List<String> partitionKeys;
   private final String defaultPartName;
@@ -121,7 +121,7 @@ public class HoodieTableSource implements
   private List<Map<String, String>> requiredPartitions;
 
   public HoodieTableSource(
-      TableSchema schema,
+      ResolvedSchema schema,
       Path path,
       List<String> partitionKeys,
       String defaultPartName,
@@ -130,7 +130,7 @@ public class HoodieTableSource implements
   }
 
   public HoodieTableSource(
-      TableSchema schema,
+      ResolvedSchema schema,
       Path path,
       List<String> partitionKeys,
       String defaultPartName,
@@ -146,7 +146,7 @@ public class HoodieTableSource implements
     this.conf = conf;
     this.requiredPartitions = requiredPartitions;
     this.requiredPos = requiredPos == null
-        ? IntStream.range(0, schema.getFieldCount()).toArray()
+        ? IntStream.range(0, schema.getColumnCount()).toArray()
         : requiredPos;
     this.limit = limit == null ? NO_LIMIT_CONSTANT : limit;
     this.filters = filters == null ? Collections.emptyList() : filters;
@@ -245,8 +245,8 @@ public class HoodieTableSource implements
   }
 
   private DataType getProducedDataType() {
-    String[] schemaFieldNames = this.schema.getFieldNames();
-    DataType[] schemaTypes = this.schema.getFieldDataTypes();
+    String[] schemaFieldNames = this.schema.getColumnNames().toArray(new String[0]);
+    DataType[] schemaTypes = this.schema.getColumnDataTypes().toArray(new DataType[0]);
 
     return DataTypes.ROW(Arrays.stream(this.requiredPos)
         .mapToObj(i -> DataTypes.FIELD(schemaFieldNames[i], schemaTypes[i]))
@@ -378,8 +378,8 @@ public class HoodieTableSource implements
             }
             FileInputFormat<RowData> format = new CopyOnWriteInputFormat(
                 FilePathUtils.toFlinkPaths(paths),
-                this.schema.getFieldNames(),
-                this.schema.getFieldDataTypes(),
+                this.schema.getColumnNames().toArray(new String[0]),
+                this.schema.getColumnDataTypes().toArray(new DataType[0]),
                 this.requiredPos,
                 this.conf.getString(FlinkOptions.PARTITION_DEFAULT_NAME),
                 this.limit == NO_LIMIT_CONSTANT ? Long.MAX_VALUE : this.limit, // ParquetInputFormat always uses the limit value
@@ -394,8 +394,8 @@ public class HoodieTableSource implements
       case FlinkOptions.QUERY_TYPE_READ_OPTIMIZED:
         FileInputFormat<RowData> format = new CopyOnWriteInputFormat(
             FilePathUtils.toFlinkPaths(paths),
-            this.schema.getFieldNames(),
-            this.schema.getFieldDataTypes(),
+            this.schema.getColumnNames().toArray(new String[0]),
+            this.schema.getColumnDataTypes().toArray(new DataType[0]),
             this.requiredPos,
             "default",
             this.limit == NO_LIMIT_CONSTANT ? Long.MAX_VALUE : this.limit, // ParquetInputFormat always uses the limit value
